@@ -8,6 +8,8 @@ drawing = True  # Determines if the user is still drawing
 first_point = None  # Stores the first point for easier closure
 closing_threshold = 15  # Larger hitbox size for closing the shape
 
+capture_now = False
+latest_frame = None
 
 def draw_mask_overlay(image, points, mouse_pos=None):
     """ Draws the polygon and previews the next line while drawing. """
@@ -58,49 +60,65 @@ def draw_polygon(event, x, y, flags, param):
 
 
 def setup_mask():
-    """ Main function to allow users to draw a polygon mask. """
-    global original_frame, first_point
-
+    global original_frame, first_point, latest_frame, capture_now, polygon_points
+    polygon_points = []
+    first_point = None
+    
     cap = cv2.VideoCapture(0)
     if not cap.isOpened():
         print("Error: Could not open webcam.")
         return
 
-    ret, frame = cap.read()
-    cap.release()
+    cv2.namedWindow("Setup Fridge Mask")
     
-    if not ret:
-        print("Error: Could not capture image.")
-        return
-
-    original_frame = frame.copy()
-
+    print("\n📝 INSTRUCTIONS:")
+    print(" - Press the 'c' key to capture an image.\n")
+    
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            print("Error: Could not read frame from webcam.")
+            break
+        latest_frame = frame.copy()
+        cv2.imshow("Setup Fridge Mask", latest_frame)
+        
+        key = cv2.waitKey(1) & 0xFF
+        if key == ord('c'):
+            original_frame = latest_frame.copy()
+            print("Photo captured from live feed.")
+            break
+        elif key == ord('q'):  # Optional exit during live view
+            print("Exiting without capturing photo.")
+            cap.release()
+            cv2.destroyAllWindows()
+            return
+    
+    cap.release()
+    cv2.destroyAllWindows()
+    
     print("\n📝 INSTRUCTIONS:")
     print(" - Click to add points to the mask area.")
     print(f" - Click **near the first point** (within {closing_threshold}px) to close the shape.")
     print(" - Press 'r' to reset.")
     print(" - Press 'q' to save and exit.\n")
-
+    
     cv2.imshow("Setup Fridge Mask", original_frame)
     cv2.setMouseCallback("Setup Fridge Mask", draw_polygon)
-
+    
     while True:
         key = cv2.waitKey(1) & 0xFF
-        
-        if key == ord('q') and not drawing:  # Press 'q' to save and exit
+        if key == ord('q') and not drawing:
             break
-        elif key == ord('r'):  # Reset all points
+        elif key == ord('r'):
             polygon_points.clear()
             first_point = None
             cv2.imshow("Setup Fridge Mask", original_frame)
-
-    # Save mask to JSON file
+    
     with open(MASK_FILE, "w") as file:
         json.dump(polygon_points, file)
-
+        
     print(f"\n✅ Mask saved to {MASK_FILE}")
     print("🎯 Run the main fridge tracking script to apply the mask.\n")
-    
     cv2.destroyAllWindows()
 
 

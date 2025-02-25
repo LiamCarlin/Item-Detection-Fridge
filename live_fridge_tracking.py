@@ -12,7 +12,7 @@ from firebase_admin import credentials, firestore
 from ultralytics import YOLO
 
 # Firebase Setup
-cred = credentials.Certificate("fridge-detection-firebase-adminsdk-fbsvc-a48c01fce7.json")
+cred = credentials.Certificate("fridge-detection-firebase-adminsdk-fbsvc-dc28c2361f.json")
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
